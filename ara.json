@@ -1,0 +1,22 @@
+{
+  "name": "LUME Research Engine",
+  "version": "2026.4.0-STABLE",
+  "agent_runtime": "gemini-3.1-pro",
+  "dependencies": {
+    "llm": [
+      "gemini-3.1-pro",
+      "gemini-3-flash-preview"
+    ],
+    "tools": [
+      "tavily-search-api",
+      "google-search-grounding"
+    ],
+    "framework": "react-19-vite"
+  },
+  "capabilities": [
+    "self-healing-state",
+    "real-time-finops",
+    "cross-encoder-reranking",
+    "multi-tiered-search-fallback"
+  ]
+}
