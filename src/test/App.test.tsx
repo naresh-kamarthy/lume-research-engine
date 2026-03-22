@@ -1,9 +1,9 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import App from '../App';
 import { useWorkspaceStore } from '../store';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { http, HttpResponse } from 'msw';
 import { server } from './setup';
 import { BentoGrid } from '../components/BentoGrid';
@@ -56,6 +56,10 @@ describe('App Orchestration', () => {
         vi.mocked(useMutation).mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     });
 
+    afterEach(() => {
+        vi.unstubAllEnvs();
+    });
+
     it('renders header and child components with live status', async () => {
         render(
             <QueryClientProvider client={queryClient}>
@@ -93,7 +97,9 @@ describe('App Orchestration', () => {
         );
 
         const deepDiveBtn = await screen.findByText(/DEEP DIVE/i);
-        fireEvent.click(deepDiveBtn);
+        await act(async () => {
+            fireEvent.click(deepDiveBtn);
+        });
 
         expect(useWorkspaceStore.getState().isDeepDive).toBe(true);
     });
@@ -111,7 +117,7 @@ describe('App Orchestration', () => {
 
         const resetBtn = await screen.findByRole('button', { name: /SESSION|RESETTING/i });
 
-        act(() => {
+        await act(async () => {
             fireEvent.click(resetBtn);
         });
 
@@ -139,7 +145,7 @@ describe('App Orchestration', () => {
             <div>
                 <button onClick={() => {
                     setCode('This is a test code that exists');
-                    retryWithDeepSearch();
+                    setTimeout(retryWithDeepSearch, 0);
                 }}>MOCK RETRY WITH CODE</button>
             </div>
         ));
@@ -151,8 +157,56 @@ describe('App Orchestration', () => {
         );
 
         const btn = await screen.findByText('MOCK RETRY WITH CODE');
-        fireEvent.click(btn);
+        await act(async () => {
+            fireEvent.click(btn);
+            await new Promise(r => setTimeout(r, 600)); // wait for setCode and retry
+        });
 
+        expect(useWorkspaceStore.getState().isDeepDive).toBe(true);
+    });
+
+    it('hits retryWithDeepSearch with truthy debouncedCode', async () => {
+        vi.mocked(BentoGrid).mockImplementation(({ retryWithDeepSearch, setCode }: any) => {
+            useEffect(() => {
+                setCode('HAS_CODE');
+            }, [setCode]);
+            return <button onClick={retryWithDeepSearch}>FORCE RETRY TRUTHY</button>;
+        });
+
+        render(
+            <QueryClientProvider client={queryClient}>
+                <App />
+            </QueryClientProvider>
+        );
+
+        const btn = await screen.findByText('FORCE RETRY TRUTHY');
+        await act(async () => {
+             fireEvent.click(btn);
+             // Wait for internal debounce timeout (1500)
+             await new Promise(r => setTimeout(r, 1600)); 
+        });
+        expect(useWorkspaceStore.getState().isDeepDive).toBe(true);
+    });
+
+    it('hits retryWithDeepSearch with empty debouncedCode (false branch)', async () => {
+        vi.mocked(BentoGrid).mockImplementation(({ retryWithDeepSearch, setCode }: any) => {
+            useEffect(() => {
+                setCode('');
+            }, [setCode]);
+            return <button onClick={retryWithDeepSearch}>FORCE RETRY EMPTY</button>;
+        });
+
+        render(
+            <QueryClientProvider client={queryClient}>
+                <App />
+            </QueryClientProvider>
+        );
+
+        const btn = await screen.findByText('FORCE RETRY EMPTY');
+        await act(async () => {
+             fireEvent.click(btn);
+             await new Promise(r => setTimeout(r, 1600)); 
+        });
         expect(useWorkspaceStore.getState().isDeepDive).toBe(true);
     });
 
@@ -189,9 +243,9 @@ describe('App Orchestration', () => {
         vi.mocked(useMutation).mockReturnValue({ mutate: vi.fn(), isPending: false } as any);
     });
 
-    it('hits retryWithDeepSearch without debouncedCode', async () => {
-        vi.mocked(BentoGrid).mockImplementation(({ retryWithDeepSearch }: any) => (
-            <button onClick={retryWithDeepSearch}>FORCE RETRY</button>
+    it('does not trigger context update for short code', async () => {
+        vi.mocked(BentoGrid).mockImplementation(({ setCode }: any) => (
+            <input data-testid="short-editor" onChange={(e) => setCode(e.target.value)} />
         ));
 
         render(
@@ -200,7 +254,14 @@ describe('App Orchestration', () => {
             </QueryClientProvider>
         );
 
-        fireEvent.click(screen.getByText('FORCE RETRY'));
-        expect(useWorkspaceStore.getState().isDeepDive).toBe(true);
+        const editor = screen.getByTestId('short-editor');
+        fireEvent.change(editor, { target: { value: 'short' } });
+
+        await act(async () => {
+            await new Promise(r => setTimeout(r, 1600));
+        });
+        // keywords should be empty
+        const state = useWorkspaceStore.getState();
+        expect(state.results).toHaveLength(0);
     });
 });

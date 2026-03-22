@@ -45,10 +45,24 @@ describe('FinOpsFooter', () => {
     });
 
     it('renders connectivity indicators based on diagnostics', () => {
-        render(<FinOpsFooter diagnostics={{ gemini: true, tavily: false }} />);
-        const gemini = screen.getByText(/GEMINI ●/i);
-        const tavily = screen.getByText(/TAVILY ○/i);
-        expect(gemini).toHaveClass('text-emerald-400');
-        expect(tavily).toHaveClass('text-rose-400');
+        const { rerender } = render(<FinOpsFooter diagnostics={{ gemini: true, tavily: false }} />);
+        expect(screen.getByText(/GEMINI ●/i)).toHaveClass('text-emerald-400');
+        expect(screen.getByText(/TAVILY ○/i)).toHaveClass('text-rose-400');
+
+        rerender(<FinOpsFooter diagnostics={{ gemini: false, tavily: true }} />);
+        expect(screen.getByText(/GEMINI ○/i)).toHaveClass('text-rose-400');
+        expect(screen.getByText(/TAVILY ●/i)).toHaveClass('text-emerald-400');
+    });
+
+    it('displays resilience saved amount and changes style when saved > 0', () => {
+        useWorkspaceStore.setState({ 
+            tokenWallet: { ...useWorkspaceStore.getState().tokenWallet, mockRequestsServed: 10 } 
+        });
+        render(<FinOpsFooter diagnostics={mockDiagnostics} />);
+        const saved = screen.getByText(/RESILIENCE_SAVED:/i);
+        expect(saved).toBeInTheDocument();
+        // Since mockRequestsServed > 0, calculateResilienceSaved() > 0
+        const amount = screen.getByText(/\$0\.0850/); // 10 * 0.0085
+        expect(amount).toHaveClass('text-amber-500/80');
     });
 });

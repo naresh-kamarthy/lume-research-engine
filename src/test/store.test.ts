@@ -162,6 +162,21 @@ describe('useWorkspaceStore', () => {
     });
   });
 
+  describe('Storage Resilience', () => {
+    it('should return empty array if localStorage is corrupted', async () => {
+      // Mock getItem to throw
+      const getItemSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+        throw new Error('Corrupted JSON');
+      });
+      
+      vi.resetModules();
+      const { useWorkspaceStore: freshStore } = await import('../store');
+      expect(freshStore.getState().pinnedResearch).toEqual([]);
+      
+      getItemSpy.mockRestore();
+    });
+  });
+
   describe('Utility Actions', () => {
     it('should handleNewSession via reset', () => {
       const store = useWorkspaceStore.getState();

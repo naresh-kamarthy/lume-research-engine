@@ -1,11 +1,18 @@
 # LUME: Self-Healing Research Engine `V2026.4.0-STABLE`
 
-[![React 19](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
-[![Gemini 3.1 Pro](https://img.shields.io/badge/Gemini-3.1%20Pro-orange.svg)](https://ai.google.dev/)
-[![Tailwind 4](https://img.shields.io/badge/Tailwind-4-38b2ac.svg)](https://tailwindcss.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
 [![TS Strict](https://img.shields.io/badge/TypeScript-Strict-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind 4](https://img.shields.io/badge/Tailwind-4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![Zustand](https://img.shields.io/badge/Zustand-443E38?style=for-the-badge&logo=react)](https://zustand-demo.pmnd.rs/)
+[![TanStack Query](https://img.shields.io/badge/TanStack%20Query-FF4154?style=for-the-badge&logo=react-query&logoColor=white)](https://tanstack.com/query/latest)
+[![Gemini 3 Flash Preview](https://img.shields.io/badge/Gemini_3-flash_preview-orange.svg?style=for-the-badge&logo=google-gemini&logoColor=white)](https://ai.google.dev/)
+[![Resilience: Multi-tiered Fallback](https://img.shields.io/badge/Resilience-Multi--tiered%20Fallback-brightgreen)](README.md#🛡️-the-resilience-protocol)
+[![Grounded: Gemini Search](https://img.shields.io/badge/Grounded-Gemini%20Search-blue)](README.md#🔬-grounded-rag-engine)
+[![FinOps: Cost Observability](https://img.shields.io/badge/FinOps-Cost%20Observability-success)](README.md#📊-finops-observability)
+[![Self-Healing: Zero-Downtime](https://img.shields.io/badge/Self--Healing-Zero--Downtime-orange)](README.md#🛡️-the-resilience-protocol)
 [![Vitest Coverage](https://img.shields.io/badge/Coverage-100%25-449124?style=for-the-badge&logo=vitest)](https://vitest.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 
 > **"The Zero-Downtime Agentic Workspace."**  
 > LUME is a production-grade research engine engineered for absolute resilience, utilizing multi-tiered fallback orchestration to ensure 100% session continuity.
@@ -22,12 +29,11 @@ graph TD
     B -- Tier 1: Primary --> C[Tavily Search API]
     B -- Tier 2: Fallback --> D[Gemini Search Grounding]
     B -- Tier 3: Critical --> E[Mock Research Library]
-    C --> F[Gemini 3.1 Pro: Synthesis]
+    C --> F[Gemini 3 Flash Preview: Synthesis]
     D --> F
     E --> F
     F --> G[React 19 Frontend]
 ```
-
 ---
 
 ## 🛡️ The Resilience Protocol
@@ -86,7 +92,7 @@ LUME's UI is designed for information density and state clarity:
 
 - **UI Framework**: `react-19-vite` (Stable)
 - **Styling Engine**: Tailwind v4 (CSS Variables first)
-- **Agent Intelligence**: `gemini-3.1-pro` runtime
+- **Agent Intelligence**: `gemini-3-flash-preview` runtime
 - **State Management**: Zustand (Persistent Context)
 - **Animation**: `motion/react`
 

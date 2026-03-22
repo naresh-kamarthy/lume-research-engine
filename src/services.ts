@@ -1,9 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
-import { useWorkspaceStore } from "./store";
+import { useWorkspaceStore } from "./store/index";
 import { mockResearchLibrary, ResearchItem } from "./mockResearchLibrary";
 
 const ai = new GoogleGenAI({
-  apiKey: process.env.VITE_GEMINI_API_KEY || ""
+  apiKey: import.meta.env.VITE_GEMINI_API_KEY || "AI_STUDIO_FALLBACK"
 });
 
 export async function extractKeywords(text: string): Promise<string[]> {
@@ -25,12 +25,23 @@ export async function extractKeywords(text: string): Promise<string[]> {
     store.addTokens(100, 20);
     store.setThroughput(Date.now() - startTime);
 
-    const keywords = response.text?.split(',').map(k => k.trim()).filter(k => k.length > 0) || [];
-    return keywords.slice(0, 3).length > 0 ? keywords.slice(0, 3) : localKeywordFallback(text);
+    let keywords: string[] = [];
+    if (response.text) {
+      keywords = response.text.split(',').map(k => k.trim()).filter(k => k.length > 0);
+    }
+    
+    if (keywords.length > 0) {
+      return keywords.slice(0, 3);
+    }
+    return localKeywordFallback(text);
   } catch (error: any) {
     // Trigger global healing protocol on rate limit or server error
-    if (error?.status === 429 || error?.status === 500) {
-      store.setApiError(error.status);
+    const errStatus = error?.status;
+    const isRateLimit = errStatus === 429;
+    const isServerError = errStatus === 500;
+    
+    if (isRateLimit || isServerError) {
+      store.setApiError(errStatus);
     }
     return localKeywordFallback(text);
   }
@@ -164,7 +175,7 @@ export async function rerankAndEvaluate(rawResults: any[], keywords: string[], i
   try {
     evaluation = JSON.parse(rerankResponse.text || "[]");
   } catch (e) {
-    console.error("[Reranker] Failed to parse evaluation JSON:", e);
+    console.error("[Reranker] JSON Error", e);
     evaluation = [];
   }
   const evalItems = Array.isArray(evaluation) ? evaluation : (evaluation.results || []);

@@ -75,6 +75,47 @@ describe('BentoGrid', () => {
         const editor = screen.getByTestId('mock-editor');
         fireEvent.change(editor, { target: { value: 'new code' } });
         expect(defaultProps.setCode).toHaveBeenCalledWith('new code');
+
+        // Test fallback to empty string when value is null/undefined (though textarea always gives string)
+        // But we mock Editor to handle value || ''
+        fireEvent.change(editor, { target: { value: '' } });
+        expect(defaultProps.setCode).toHaveBeenCalledWith('');
+    });
+
+    it('shows pending status when isPending is true', () => {
+        render(<BentoGrid {...defaultProps} isPending={true} />);
+        const loader = screen.getByText(/Detected Keywords/i).parentElement?.querySelector('.animate-spin');
+        expect(loader).toBeInTheDocument();
+    });
+
+    it('shows empty keywords message', () => {
+        render(<BentoGrid {...defaultProps} optimisticKeywords={[]} />);
+        expect(screen.getByText(/Waiting for context\.\.\./i)).toBeInTheDocument();
+    });
+
+    it('shows empty results message', () => {
+        render(<BentoGrid {...defaultProps} researchResults={[]} />);
+        expect(screen.getByText(/Type in the editor to populate research/i)).toBeInTheDocument();
+    });
+
+    it('shows low relevance warning and handles deep search retry', () => {
+        const props = {
+            ...defaultProps,
+            researchResults: [
+                { id: '1', title: 'Bad Result', summary: '...', source: '...', tags: [], relevanceScore: 0.1, isLowRelevance: true }
+            ]
+        };
+        render(<BentoGrid {...props} />);
+        expect(screen.getByText(/LOW RELEVANCE/i)).toBeInTheDocument();
+        
+        fireEvent.click(screen.getByText(/RETRY WITH DEEP SEARCH/i));
+        expect(props.retryWithDeepSearch).toHaveBeenCalled();
+    });
+
+    it('shows gemini search active status', () => {
+        useWorkspaceStore.setState({ activeProvider: 'gemini-grounding' });
+        render(<BentoGrid {...defaultProps} />);
+        expect(screen.getByText(/GEMINI SEARCH ACTIVE/i)).toBeInTheDocument();
     });
 
     it('shows fallback status when isHealing is true', () => {
@@ -83,34 +124,57 @@ describe('BentoGrid', () => {
         expect(screen.getByText(/FALLBACK ACTIVE/i)).toBeInTheDocument();
     });
 
+    it('renders verified fact badge for grounded items', () => {
+        const props = {
+            ...defaultProps,
+            researchResults: [
+                { id: 'g1', title: 'Grounded Result', summary: '...', source: '...', tags: [], relevanceScore: 0.9, isGrounded: true }
+            ]
+        };
+        render(<BentoGrid {...props} />);
+        expect(screen.getByText(/Verified Fact/i)).toBeInTheDocument();
+    });
+
+    it('applies correct styling for relevance score ranges', () => {
+        const props = {
+            ...defaultProps,
+            researchResults: [
+                { id: 'high', title: 'H', summary: 'S', source: 'S', tags: [], relevanceScore: 0.9 },
+                { id: 'mid', title: 'M', summary: 'S', source: 'S', tags: [], relevanceScore: 0.5 },
+                { id: 'low', title: 'L', summary: 'S', source: 'S', tags: [], relevanceScore: 0.2 },
+            ]
+        };
+        const { container } = render(<BentoGrid {...props} />);
+        
+        // High score should have emerald border
+        const highCard = container.querySelector('.border-emerald-500\\/50');
+        expect(highCard).toBeInTheDocument();
+
+        // Low score should be grayscale
+        const lowCard = container.querySelector('.grayscale');
+        expect(lowCard).toBeInTheDocument();
+    });
+
     it('pins and unpins research results', () => {
-        const pinResearch = vi.fn();
-        const unpinResearch = vi.fn();
-        useWorkspaceStore.setState({ pinResearch, unpinResearch });
+        const pinStore = useWorkspaceStore.getState();
+        const pinResearchSpy = vi.spyOn(pinStore, 'pinResearch');
+        const unpinResearchSpy = vi.spyOn(pinStore, 'unpinResearch');
 
-        render(<BentoGrid {...defaultProps} />);
+        const { rerender } = render(<BentoGrid {...defaultProps} />);
 
-        // Find buttons that don't have text (these are the pin buttons)
         const buttons = screen.getAllByRole('button');
-        const pinBtn = buttons.find(b => !b.textContent && b.className.includes('p-1.5'));
+        const pinBtn = buttons.find(b => b.querySelector('svg')?.classList.contains('lucide-bookmark'));
+        if (pinBtn) fireEvent.click(pinBtn);
+        expect(pinResearchSpy).toHaveBeenCalledWith(defaultProps.researchResults[0]);
 
-        if (pinBtn) {
-            fireEvent.click(pinBtn);
-            expect(pinResearch).toHaveBeenCalledWith(defaultProps.researchResults[0]);
-        }
-
-        // Mock pinned state
-        useWorkspaceStore.setState({
-            pinnedResearch: [defaultProps.researchResults[0]],
-            unpinResearch
+        // Mock pinned in store
+        act(() => {
+            useWorkspaceStore.setState({ pinnedResearch: [defaultProps.researchResults[0]] });
         });
 
-        render(<BentoGrid {...defaultProps} />);
-        const activePinBtn = screen.getAllByRole('button').find(b => b.className.includes('text-emerald-400'));
-
-        if (activePinBtn) {
-            fireEvent.click(activePinBtn);
-            expect(unpinResearch).toHaveBeenCalledWith('1');
-        }
+        rerender(<BentoGrid {...defaultProps} />);
+        const pinnedBtn = screen.getAllByRole('button').find(b => b.querySelector('svg')?.classList.contains('lucide-bookmark-check'));
+        if (pinnedBtn) fireEvent.click(pinnedBtn);
+        expect(unpinResearchSpy).toHaveBeenCalledWith('1');
     });
 });

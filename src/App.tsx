@@ -97,8 +97,13 @@ function Workspace() {
   }, [addOptimisticKeyword]);
 
   const retryWithDeepSearch = useCallback(async () => {
-    startTransition(() => setDeepDive(true));
-    if (debouncedCode) await handleContextUpdate(debouncedCode);
+    startTransition(() => {
+        setDeepDive(true);
+    });
+    if (!debouncedCode) {
+      return;
+    }
+    await handleContextUpdate(debouncedCode);
   }, [debouncedCode, handleContextUpdate, setDeepDive]);
 
   return (
